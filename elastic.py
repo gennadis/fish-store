@@ -74,3 +74,14 @@ def get_product(credential_token: str, product_id: str) -> dict:
     response.raise_for_status()
 
     return response.json()
+
+
+def get_file_href(credential_token: str, file_id: str) -> str:
+    headers = {"Authorization": f"Bearer {credential_token}"}
+    response = requests.get(
+        f"https://api.moltin.com/v2/files/{file_id}", headers=headers
+    )
+    response.raise_for_status()
+    file_details = response.json()["data"]
+
+    return file_details["link"]["href"]
