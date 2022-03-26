@@ -1,5 +1,6 @@
 import os
 from pprint import pprint
+from urllib import response
 
 import requests
 from dotenv import load_dotenv
@@ -76,6 +77,16 @@ def get_cart(credential_token: str, cart_id: str) -> dict:
     return response.json()
 
 
+def get_cart_items(credential_token: str, cart_id: str) -> dict:
+    headers = {"Authorization": f"Bearer {credential_token}"}
+    response = requests.get(
+        f"https://api.moltin.com/v2/carts/{cart_id}/items", headers=headers
+    )
+    response.raise_for_status()
+
+    return response.json()
+
+
 def main():
     load_dotenv()
     client_id = os.getenv("ELASTICPATH_CLIENT_ID")
@@ -96,7 +107,9 @@ def main():
     # pprint(product_adding_status)
 
     cart = get_cart(credential_token=credential_token, cart_id="abc")
-    pprint(cart)
+
+    cart_items = get_cart_items(credential_token=credential_token, cart_id="abc")
+    pprint(cart_items)
 
 
 if __name__ == "__main__":
