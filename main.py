@@ -42,7 +42,28 @@ def get_all_products(credential_token: str) -> dict:
     response = requests.get("https://api.moltin.com/v2/products", headers=headers)
     response.raise_for_status()
 
-    return response.json()["data"]
+    return response.json()
+
+
+def add_product_to_cart(
+    credential_token: str, product_id: str, quantity: int, cart_id: str
+) -> dict:
+    headers = {"Authorization": f"Bearer {credential_token}"}
+    json_data = {
+        "data": {
+            "id": product_id,
+            "type": "cart_item",
+            "quantity": quantity,
+        }
+    }
+    response = requests.post(
+        f"https://api.moltin.com/v2/carts/{cart_id}/items",
+        headers=headers,
+        json=json_data,
+    )
+    response.raise_for_status()
+
+    return response.json()
 
 
 def main():
@@ -54,7 +75,15 @@ def main():
     credential_token = get_credential_token(client_id, client_secret)
 
     products = get_all_products(credential_token)
-    pprint(products)
+    products_ids = [product["id"] for product in products["data"]]
+
+    product_adding_status = add_product_to_cart(
+        credential_token=credential_token,
+        product_id=products_ids[1],
+        quantity=1,
+        cart_id="abc",
+    )
+    pprint(product_adding_status)
 
 
 if __name__ == "__main__":
