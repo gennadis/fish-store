@@ -66,31 +66,11 @@ def get_cart_items(credential_token: str, cart_id: str) -> dict:
     return response.json()
 
 
-def main():
-    load_dotenv()
-    client_id = os.getenv("ELASTICPATH_CLIENT_ID")
-    client_secret = os.getenv("ELASTICPATH_CLIENT_SECRET")
-    catalog_id = os.getenv("CATALOG_ID")
+def get_product(credential_token: str, product_id: str) -> dict:
+    headers = {"Authorization": f"Bearer {credential_token}"}
+    response = requests.get(
+        f"https://api.moltin.com/v2/products/{product_id}", headers=headers
+    )
+    response.raise_for_status()
 
-    credential_token = get_credential_token(client_id, client_secret)
-
-    products = get_all_products(credential_token)["data"]
-    product_names = [product["name"] for product in products]
-    products_ids = [product["id"] for product in products]
-    print(list(zip(product_names, products_ids)))
-    # product_adding_status = add_product_to_cart(
-    #     credential_token=credential_token,
-    #     product_id=products_ids[1],
-    #     quantity=1,
-    #     cart_id="abc",
-    # )
-    # pprint(product_adding_status)
-
-    # cart = get_cart(credential_token=credential_token, cart_id="abc")
-
-    # cart_items = get_cart_items(credential_token=credential_token, cart_id="abc")
-    # pprint(cart_items)
-
-
-if __name__ == "__main__":
-    main()
+    return response.json()
