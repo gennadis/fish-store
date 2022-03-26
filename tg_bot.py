@@ -27,13 +27,12 @@ def error_handler(update, context):
 
 def generate_products_keyboard_markup(elastic_token: str):
     products = get_all_products(credential_token=elastic_token)["data"]
-    product_names = [product["name"] for product in products]
-    products_ids = [product["id"] for product in products]
+    product_names_and_ids = [(product["name"], product["id"]) for product in products]
 
     keyboard = [
         [
             InlineKeyboardButton(text=product_name, callback_data=product_id)
-            for product_name, product_id in list(zip(product_names, products_ids))
+            for product_name, product_id in product_names_and_ids
         ]
     ]
     products_markup = InlineKeyboardMarkup(keyboard)
