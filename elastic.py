@@ -74,9 +74,10 @@ def main():
 
     credential_token = get_credential_token(client_id, client_secret)
 
-    products = get_all_products(credential_token)
-    products_ids = [product["id"] for product in products["data"]]
-
+    products = get_all_products(credential_token)["data"]
+    product_names = [product["name"] for product in products]
+    products_ids = [product["id"] for product in products]
+    print(list(zip(product_names, products_ids)))
     # product_adding_status = add_product_to_cart(
     #     credential_token=credential_token,
     #     product_id=products_ids[1],
@@ -85,10 +86,10 @@ def main():
     # )
     # pprint(product_adding_status)
 
-    cart = get_cart(credential_token=credential_token, cart_id="abc")
+    # cart = get_cart(credential_token=credential_token, cart_id="abc")
 
-    cart_items = get_cart_items(credential_token=credential_token, cart_id="abc")
-    pprint(cart_items)
+    # cart_items = get_cart_items(credential_token=credential_token, cart_id="abc")
+    # pprint(cart_items)
 
 
 if __name__ == "__main__":
