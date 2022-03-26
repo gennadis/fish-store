@@ -16,12 +16,29 @@ from telegram.ext import (
 )
 
 from redis_connection import get_redis_connection
+from elastic import get_credential_token, get_all_products
 
 logger = logging.getLogger(__file__)
 
 
 def error_handler(update, context):
     logger.error(msg="Telegram bot encountered an error", exc_info=context.error)
+
+
+def generate_products_keyboard_markup(elastic_token: str):
+    products = get_all_products(credential_token=elastic_token)["data"]
+    product_names = [product["name"] for product in products]
+    products_ids = [product["id"] for product in products]
+
+    keyboard = [
+        [
+            InlineKeyboardButton(text=product_name, callback_data=product_id)
+            for product_name, product_id in list(zip(product_names, products_ids))
+        ]
+    ]
+    products_markup = InlineKeyboardMarkup(keyboard)
+
+    return products_markup
 
 
 def start(update: Update, context: CallbackContext):
@@ -32,17 +49,12 @@ def start(update: Update, context: CallbackContext):
     Теперь в ответ на его команды будет запускаеться хэндлер echo.
     """
     user_name = update.effective_user.first_name
-    keyboard = [
-        [
-            InlineKeyboardButton("Option 1", callback_data="1"),
-            InlineKeyboardButton("Option 2", callback_data="2"),
-        ],
-        [InlineKeyboardButton("Option 3", callback_data="3")],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    elastic_token = context.bot_data.get("elastic")
+    products_markup = generate_products_keyboard_markup(elastic_token)
 
     update.message.reply_text(
-        text=f"Привет, {user_name}! Я - бот рыбного магазина", reply_markup=reply_markup
+        text=f"Привет, {user_name}! Я - бот рыбного магазина",
+        reply_markup=products_markup,
     )
 
     return "ECHO"
@@ -94,10 +106,8 @@ def handle_users_reply(update, context):
 
     if user_reply == "/start":
         user_state = "START"
-        update.message.reply_text(user_state)
     else:
         user_state = redis_connection.get(chat_id).decode("utf-8")
-        update.message.reply_text(user_state)
 
     states_functions = {"START": start, "ECHO": echo}
     state_handler = states_functions[user_state]
@@ -117,10 +127,15 @@ def main():
     load_dotenv()
     telegram_token = os.getenv("TELEGRAM_TOKEN")
 
+    elastic_client_id = os.getenv("ELASTICPATH_CLIENT_ID")
+    elastic_client_secret = os.getenv("ELASTICPATH_CLIENT_SECRET")
+    elastic_credential_token = get_credential_token(
+        elastic_client_id, elastic_client_secret
+    )
+
     redis_address = os.getenv("REDIS_ADDRESS")
     redis_name = os.getenv("REDIS_NAME")
     redis_password = os.getenv("REDIS_PASSWORD")
-
     redis_connection = get_redis_connection(
         redis_address=redis_address,
         redis_name=redis_name,
@@ -130,6 +145,8 @@ def main():
     updater = Updater(token=telegram_token, use_context=True)
     dispatcher = updater.dispatcher
     dispatcher.bot_data["redis"] = redis_connection
+    dispatcher.bot_data["elastic"] = elastic_credential_token
+
     dispatcher.add_error_handler(error_handler)
 
     dispatcher.add_handler(CallbackQueryHandler(button))
