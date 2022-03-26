@@ -16,7 +16,7 @@ from telegram.ext import (
 )
 
 from redis_connection import get_redis_connection
-from elastic import get_credential_token, get_all_products
+from elastic import get_credential_token, get_all_products, get_product
 
 logger = logging.getLogger(__file__)
 
@@ -56,7 +56,7 @@ def start(update: Update, context: CallbackContext):
         reply_markup=products_markup,
     )
 
-    return "ECHO"
+    return "HANDLE_MENU"
 
 
 def button(update: Update, context: CallbackContext):
@@ -77,6 +77,19 @@ def echo(update: Update, context: CallbackContext):
     update.message.reply_text(users_reply)
 
     return "ECHO"
+
+
+def handle_menu(update: Update, context: CallbackContext):
+    query = update.callback_query
+    query.answer()
+
+    elastic_token = context.bot_data.get("elastic")
+    product = get_product(credential_token=elastic_token, product_id=query.data)
+    product_description = product["data"]["description"]
+
+    query.edit_message_text(text=product_description)
+
+    return "START"
 
 
 def handle_users_reply(update, context):
@@ -108,7 +121,11 @@ def handle_users_reply(update, context):
     else:
         user_state = redis_connection.get(chat_id).decode("utf-8")
 
-    states_functions = {"START": start, "ECHO": echo}
+    states_functions = {
+        "START": start,
+        "ECHO": echo,
+        "HANDLE_MENU": handle_menu,
+    }
     state_handler = states_functions[user_state]
     # Если вы вдруг не заметите, что python-telegram-bot перехватывает ошибки.
     # Оставляю этот try...except, чтобы код не падал молча.
@@ -148,8 +165,7 @@ def main():
 
     dispatcher.add_error_handler(error_handler)
 
-    dispatcher.add_handler(CallbackQueryHandler(button))
-    # dispatcher.add_handler(CallbackQueryHandler(handle_users_reply))
+    dispatcher.add_handler(CallbackQueryHandler(handle_menu))
     dispatcher.add_handler(MessageHandler(Filters.text, handle_users_reply))
     dispatcher.add_handler(CommandHandler("start", handle_users_reply))
 
