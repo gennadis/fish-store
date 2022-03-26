@@ -37,6 +37,14 @@ def delete_pcm_catalog_releases(credential_token: str, catalog_id: str) -> int:
     return response.status_code
 
 
+def get_all_products(credential_token: str) -> dict:
+    headers = {"Authorization": f"Bearer {credential_token}"}
+    response = requests.get("https://api.moltin.com/v2/products", headers=headers)
+    response.raise_for_status()
+
+    return response.json()["data"]
+
+
 def main():
     load_dotenv()
     client_id = os.getenv("ELASTICPATH_CLIENT_ID")
@@ -45,11 +53,8 @@ def main():
 
     credential_token = get_credential_token(client_id, client_secret)
 
-    catalog_releases = get_pcm_catalog_releases(credential_token, catalog_id)
-    pprint(catalog_releases)
-
-    deletion_status = delete_pcm_catalog_releases(credential_token, catalog_id)
-    print(deletion_status)
+    products = get_all_products(credential_token)
+    pprint(products)
 
 
 if __name__ == "__main__":
