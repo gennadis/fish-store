@@ -19,13 +19,22 @@ def get_credential_token(client_id: str, client_secret: str) -> str:
 
 def get_pcm_catalog_releases(credential_token: str, catalog_id: str) -> dict:
     headers = {"Authorization": f"Bearer {credential_token}"}
-
     response = requests.get(
         f"https://api.moltin.com/pcm/catalogs/{catalog_id}/releases", headers=headers
     )
     response.raise_for_status()
 
     return response.json()
+
+
+def delete_pcm_catalog_releases(credential_token: str, catalog_id: str) -> int:
+    headers = {"Authorization": f"Bearer {credential_token}"}
+    response = requests.delete(
+        f"https://api.moltin.com/pcm/catalogs/{catalog_id}/releases", headers=headers
+    )
+    response.raise_for_status()
+
+    return response.status_code
 
 
 def main():
@@ -38,6 +47,9 @@ def main():
 
     catalog_releases = get_pcm_catalog_releases(credential_token, catalog_id)
     pprint(catalog_releases)
+
+    deletion_status = delete_pcm_catalog_releases(credential_token, catalog_id)
+    print(deletion_status)
 
 
 if __name__ == "__main__":
