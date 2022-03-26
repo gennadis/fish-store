@@ -3,7 +3,7 @@ import logging
 import redis
 
 from dotenv import load_dotenv
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Filters, Updater
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 from telegram.ext import (
@@ -32,9 +32,27 @@ def start(update: Update, context: CallbackContext):
     Теперь в ответ на его команды будет запускаеться хэндлер echo.
     """
     user_name = update.effective_user.first_name
-    update.message.reply_text(f"Привет, {user_name}! Я - бот рыбного магазина")
+    keyboard = [
+        [
+            InlineKeyboardButton("Option 1", callback_data="1"),
+            InlineKeyboardButton("Option 2", callback_data="2"),
+        ],
+        [InlineKeyboardButton("Option 3", callback_data="3")],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    update.message.reply_text(
+        text=f"Привет, {user_name}! Я - бот рыбного магазина", reply_markup=reply_markup
+    )
 
     return "ECHO"
+
+
+def button(update: Update, context: CallbackContext):
+    query = update.callback_query
+    query.answer()
+
+    query.edit_message_text(text=f"Selected option: {query.data}")
 
 
 def echo(update: Update, context: CallbackContext):
@@ -114,7 +132,8 @@ def main():
     dispatcher.bot_data["redis"] = redis_connection
     dispatcher.add_error_handler(error_handler)
 
-    dispatcher.add_handler(CallbackQueryHandler(handle_users_reply))
+    dispatcher.add_handler(CallbackQueryHandler(button))
+    # dispatcher.add_handler(CallbackQueryHandler(handle_users_reply))
     dispatcher.add_handler(MessageHandler(Filters.text, handle_users_reply))
     dispatcher.add_handler(CommandHandler("start", handle_users_reply))
 
