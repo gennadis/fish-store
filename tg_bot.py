@@ -16,7 +16,7 @@ from telegram.ext import (
 )
 
 from redis_connection import get_redis_connection
-from elastic import get_credential_token, get_all_products, get_product
+from elastic import get_credential_token, get_all_products, get_product, get_file_href
 
 logger = logging.getLogger(__file__)
 
@@ -87,8 +87,11 @@ def handle_menu(update: Update, context: CallbackContext):
     product = get_product(credential_token=elastic_token, product_id=query.data)
     product_description = product["data"]["description"]
 
-    query.edit_message_text(text=product_description)
+    picture_id = product["data"]["relationships"]["main_image"]["data"]["id"]
+    picture_href = get_file_href(credential_token=elastic_token, file_id=picture_id)
 
+    update.effective_message.delete()
+    update.effective_user.send_photo(photo=picture_href, caption=product_description)
     return "START"
 
 
