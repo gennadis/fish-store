@@ -66,6 +66,16 @@ def add_product_to_cart(
     return response.json()
 
 
+def get_cart(credential_token: str, cart_id: str) -> dict:
+    headers = {"Authorization": f"Bearer {credential_token}"}
+    response = requests.get(
+        f"https://api.moltin.com/v2/carts/{cart_id}", headers=headers
+    )
+    response.raise_for_status()
+
+    return response.json()
+
+
 def main():
     load_dotenv()
     client_id = os.getenv("ELASTICPATH_CLIENT_ID")
@@ -77,13 +87,16 @@ def main():
     products = get_all_products(credential_token)
     products_ids = [product["id"] for product in products["data"]]
 
-    product_adding_status = add_product_to_cart(
-        credential_token=credential_token,
-        product_id=products_ids[1],
-        quantity=1,
-        cart_id="abc",
-    )
-    pprint(product_adding_status)
+    # product_adding_status = add_product_to_cart(
+    #     credential_token=credential_token,
+    #     product_id=products_ids[1],
+    #     quantity=1,
+    #     cart_id="abc",
+    # )
+    # pprint(product_adding_status)
+
+    cart = get_cart(credential_token=credential_token, cart_id="abc")
+    pprint(cart)
 
 
 if __name__ == "__main__":
