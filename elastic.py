@@ -1,8 +1,4 @@
-import os
-from pprint import pprint
-
 import requests
-from dotenv import load_dotenv
 
 
 def get_credential_token(client_id: str, client_secret: str) -> str:

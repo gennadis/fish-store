@@ -21,7 +21,7 @@ from elastic import get_credential_token, get_all_products, get_product, get_fil
 logger = logging.getLogger(__file__)
 
 
-def error_handler(update, context):
+def error_handler(update: Update, context: CallbackContext):
     logger.error(msg="Telegram bot encountered an error", exc_info=context.error)
 
 
@@ -41,12 +41,6 @@ def generate_products_keyboard_markup(elastic_token: str):
 
 
 def start(update: Update, context: CallbackContext):
-    """
-    Хэндлер для состояния START.
-
-    Бот отвечает пользователю фразой "Привет!" и переводит его в состояние ECHO.
-    Теперь в ответ на его команды будет запускаеться хэндлер echo.
-    """
     user_name = update.effective_user.first_name
     elastic_token = context.bot_data.get("elastic")
     products_markup = generate_products_keyboard_markup(elastic_token)
@@ -57,26 +51,6 @@ def start(update: Update, context: CallbackContext):
     )
 
     return "HANDLE_MENU"
-
-
-def button(update: Update, context: CallbackContext):
-    query = update.callback_query
-    query.answer()
-
-    query.edit_message_text(text=f"Selected option: {query.data}")
-
-
-def echo(update: Update, context: CallbackContext):
-    """
-    Хэндлер для состояния ECHO.
-
-    Бот отвечает пользователю тем же, что пользователь ему написал.
-    Оставляет пользователя в состоянии ECHO.
-    """
-    users_reply = update.message.text
-    update.message.reply_text(users_reply)
-
-    return "ECHO"
 
 
 def handle_menu(update: Update, context: CallbackContext):
@@ -95,19 +69,7 @@ def handle_menu(update: Update, context: CallbackContext):
     return "START"
 
 
-def handle_users_reply(update, context):
-    """
-    Функция, которая запускается при любом сообщении от пользователя и решает как его обработать.
-    Эта функция запускается в ответ на эти действия пользователя:
-        * Нажатие на inline-кнопку в боте
-        * Отправка сообщения боту
-        * Отправка команды боту
-    Она получает стейт пользователя из базы данных и запускает соответствующую функцию-обработчик (хэндлер).
-    Функция-обработчик возвращает следующее состояние, которое записывается в базу данных.
-    Если пользователь только начал пользоваться ботом, Telegram форсит его написать "/start",
-    поэтому по этой фразе выставляется стартовое состояние.
-    Если пользователь захочет начать общение с ботом заново, он также может воспользоваться этой командой.
-    """
+def handle_users_reply(update: Update, context: CallbackContext):
     redis_connection: redis.Redis = context.bot_data.get("redis")
 
     if update.message:
@@ -126,13 +88,10 @@ def handle_users_reply(update, context):
 
     states_functions = {
         "START": start,
-        "ECHO": echo,
         "HANDLE_MENU": handle_menu,
     }
     state_handler = states_functions[user_state]
-    # Если вы вдруг не заметите, что python-telegram-bot перехватывает ошибки.
-    # Оставляю этот try...except, чтобы код не падал молча.
-    # Этот фрагмент можно переписать.
+
     try:
         next_state = state_handler(update, context)
         redis_connection.set(chat_id, next_state)
