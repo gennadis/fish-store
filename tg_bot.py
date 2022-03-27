@@ -18,7 +18,7 @@ from telegram.ext import (
 
 from redis_connection import get_redis_connection
 from elastic import get_credential_token, get_product, get_file_href
-from keyboards import get_products_keyboard_markup, get_description_markup
+from keyboards import get_menu_markup, get_description_markup
 
 logger = logging.getLogger(__file__)
 
@@ -35,7 +35,7 @@ def error_handler(update: Update, context: CallbackContext):
 def handle_menu(update: Update, context: CallbackContext):
     user_name = update.effective_user.first_name
     elastic_token = context.bot_data.get("elastic")
-    products_markup = get_products_keyboard_markup(elastic_token)
+    products_markup = get_menu_markup(elastic_token)
 
     update.message.reply_text(
         text=f"Привет, {user_name}! Я - бот рыбного магазина",
