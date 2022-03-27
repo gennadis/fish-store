@@ -72,6 +72,20 @@ def get_product(credential_token: str, product_id: str) -> dict:
     return response.json()
 
 
+def get_product_description(product: dict):
+    product_details = product["data"]
+    product_description = f"""
+Name: {product_details['name']}
+------
+Price: {product_details['meta']['display_price']['with_tax']['formatted']} per unit
+Stock: {product_details['meta']['stock']['level']} units available
+------
+Description: {product_details['description']}
+"""
+
+    return product_description
+
+
 def get_file_href(credential_token: str, file_id: str) -> str:
     headers = {"Authorization": f"Bearer {credential_token}"}
     response = requests.get(

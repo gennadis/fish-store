@@ -17,7 +17,12 @@ from telegram.ext import (
 )
 
 from redis_connection import get_redis_connection
-from elastic import get_credential_token, get_product, get_file_href
+from elastic import (
+    get_credential_token,
+    get_product,
+    get_file_href,
+    get_product_description,
+)
 from keyboards import get_menu_markup, get_description_markup
 
 logger = logging.getLogger(__file__)
@@ -51,7 +56,7 @@ def handle_description(update: Update, context: CallbackContext):
 
     elastic_token = context.bot_data.get("elastic")
     product = get_product(credential_token=elastic_token, product_id=query.data)
-    product_description = product["data"]["description"]
+    product_description = get_product_description(product=product)
 
     picture_id = product["data"]["relationships"]["main_image"]["data"]["id"]
     picture_href = get_file_href(credential_token=elastic_token, file_id=picture_id)
