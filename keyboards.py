@@ -18,7 +18,14 @@ def get_menu_markup(elastic_token: str):
 
 
 def get_description_markup():
-    keyboard = [[InlineKeyboardButton(text="Back to menu", callback_data="back")]]
+    keyboard = [
+        [
+            InlineKeyboardButton("1 unit", callback_data=1),
+            InlineKeyboardButton("5 units", callback_data=5),
+            InlineKeyboardButton("10 units", callback_data=10),
+        ],
+        [InlineKeyboardButton(text="Back to menu", callback_data="back")],
+    ]
     description_markup = InlineKeyboardMarkup(keyboard)
 
     return description_markup
