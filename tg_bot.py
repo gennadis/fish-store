@@ -32,7 +32,7 @@ def error_handler(update: Update, context: CallbackContext):
     logger.error(msg="Telegram bot encountered an error", exc_info=context.error)
 
 
-def handle_start(update: Update, context: CallbackContext):
+def start(update: Update, context: CallbackContext):
     user_name = update.effective_user.first_name
     elastic_token = context.bot_data.get("elastic")
     products_markup = get_products_keyboard_markup(elastic_token)
@@ -45,7 +45,7 @@ def handle_start(update: Update, context: CallbackContext):
     return State.HANDLE_MENU
 
 
-def handle_menu(update: Update, context: CallbackContext):
+def handle_product_description_request(update: Update, context: CallbackContext):
     query = update.callback_query
     query.answer()
 
@@ -69,13 +69,13 @@ def run_bot(telegram_token: str, redis_connection: redis.Redis, elastic_token: s
     dispatcher.bot_data["elastic"] = elastic_token
 
     conversation = ConversationHandler(
-        entry_points=[CommandHandler("start", handle_start)],
+        entry_points=[CommandHandler("start", start)],
         states={
             State.HANDLE_MENU: [
-                CallbackQueryHandler(handle_menu),
+                CallbackQueryHandler(handle_product_description_request),
             ],
         },
-        fallbacks=[MessageHandler(Filters.text, error_handler)],
+        fallbacks=[],
     )
     dispatcher.add_handler(conversation)
     dispatcher.add_error_handler(error_handler)
