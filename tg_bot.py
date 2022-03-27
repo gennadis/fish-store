@@ -24,8 +24,9 @@ from elastic import (
     get_product_description,
     add_product_to_cart,
     get_cart_items,
+    get_cart_summary,
 )
-from keyboards import get_menu_markup, get_description_markup
+from keyboards import get_menu_markup, get_description_markup, get_cart_markup
 
 logger = logging.getLogger(__file__)
 
@@ -33,6 +34,7 @@ logger = logging.getLogger(__file__)
 class State(Enum):
     HANDLE_MENU = auto()
     HANDLE_DESCRIPTION = auto()
+    HANDLE_CART = auto()
 
 
 def error_handler(update: Update, context: CallbackContext):
@@ -86,12 +88,25 @@ def update_cart(update: Update, context: CallbackContext):
         cart_id=update.effective_user.id,
     )
 
-    user_cart_items = get_cart_items(
+    return State.HANDLE_DESCRIPTION
+
+
+def handle_cart(update: Update, context: CallbackContext):
+    query = update.callback_query
+    query.answer()
+
+    elastic_token = context.bot_data.get("elastic")
+    cart_summary = get_cart_summary(
         credential_token=elastic_token, cart_id=update.effective_user.id
     )
-    print(user_cart_items)
 
-    return State.HANDLE_DESCRIPTION
+    update.effective_message.delete()
+    update.effective_user.send_message(
+        text=cart_summary,
+        reply_markup=get_cart_markup(),
+    )
+
+    return State.HANDLE_CART
 
 
 def run_bot(telegram_token: str, redis_connection: redis.Redis, elastic_token: str):
@@ -105,11 +120,17 @@ def run_bot(telegram_token: str, redis_connection: redis.Redis, elastic_token: s
         states={
             State.HANDLE_MENU: [
                 CallbackQueryHandler(handle_menu),
+                CallbackQueryHandler(handle_cart, pattern="cart"),
             ],
             State.HANDLE_DESCRIPTION: [
                 CallbackQueryHandler(handle_menu, pattern="back"),
+                CallbackQueryHandler(handle_cart, pattern="cart"),
                 CallbackQueryHandler(update_cart, pattern="^[0-9]+$"),
                 CallbackQueryHandler(handle_description),
+            ],
+            State.HANDLE_CART: [
+                CallbackQueryHandler(handle_menu, pattern="back"),
+                CallbackQueryHandler(handle_cart),
             ],
         },
         fallbacks=[],
