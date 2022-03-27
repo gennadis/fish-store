@@ -31,3 +31,12 @@ def get_description_markup():
     description_markup = InlineKeyboardMarkup(keyboard)
 
     return description_markup
+
+
+def get_cart_markup():
+    keyboard = [
+        [InlineKeyboardButton(text="Back to menu", callback_data="back")],
+    ]
+    cart_markup = InlineKeyboardMarkup(keyboard)
+
+    return cart_markup
