@@ -1,5 +1,5 @@
-import os
 import logging
+import os
 import redis
 from enum import Enum, auto
 
@@ -76,34 +76,27 @@ def handle_menu(update: Update, context: CallbackContext):
     return State.START
 
 
-def handle_users_reply(update: Update, context: CallbackContext):
-    redis_connection: redis.Redis = context.bot_data.get("redis")
+def run_bot(telegram_token: str, redis_connection: redis.Redis, elastic_token: str):
+    updater = Updater(token=telegram_token, use_context=True)
+    dispatcher = updater.dispatcher
+    dispatcher.bot_data["redis"] = redis_connection
+    dispatcher.bot_data["elastic"] = elastic_token
 
-    if update.message:
-        user_reply = update.message.text
-        chat_id = update.message.chat_id
-    elif update.callback_query:
-        user_reply = update.callback_query.data
-        chat_id = update.callback_query.message.chat_id
-    else:
-        return
+    conversation = ConversationHandler(
+        entry_points=[CommandHandler("start", start)],
+        states={
+            State.HANDLE_MENU: [
+                CallbackQueryHandler(handle_menu),
+            ],
+        },
+        fallbacks=[MessageHandler(Filters.text, error_handler)],
+    )
+    dispatcher.add_handler(conversation)
+    dispatcher.add_error_handler(error_handler)
 
-    if user_reply == "/start":
-        user_state = State.START
-    else:
-        user_state = redis_connection.get(chat_id).decode("utf-8")
-
-    states_functions = {
-        State.START: start,
-        State.HANDLE_MENU: handle_menu,
-    }
-    state_handler = states_functions[user_state]
-
-    try:
-        next_state = state_handler(update, context)
-        redis_connection.set(chat_id, next_state)
-    except Exception as err:
-        print(err)
+    updater.start_polling()
+    updater.idle()
+    logger.info("Telegram bot started")
 
 
 def main():
@@ -114,9 +107,7 @@ def main():
 
     elastic_client_id = os.getenv("ELASTICPATH_CLIENT_ID")
     elastic_client_secret = os.getenv("ELASTICPATH_CLIENT_SECRET")
-    elastic_credential_token = get_credential_token(
-        elastic_client_id, elastic_client_secret
-    )
+    elastic_token = get_credential_token(elastic_client_id, elastic_client_secret)
 
     redis_address = os.getenv("REDIS_ADDRESS")
     redis_name = os.getenv("REDIS_NAME")
@@ -127,20 +118,11 @@ def main():
         redis_password=redis_password,
     )
 
-    updater = Updater(token=telegram_token, use_context=True)
-    dispatcher = updater.dispatcher
-    dispatcher.bot_data["redis"] = redis_connection
-    dispatcher.bot_data["elastic"] = elastic_credential_token
-
-    dispatcher.add_error_handler(error_handler)
-
-    dispatcher.add_handler(CallbackQueryHandler(handle_menu))
-    dispatcher.add_handler(MessageHandler(Filters.text, handle_users_reply))
-    dispatcher.add_handler(CommandHandler("start", handle_users_reply))
-
-    updater.start_polling()
-    updater.idle()
-    logger.info("Telegram bot started")
+    run_bot(
+        telegram_token=telegram_token,
+        redis_connection=redis_connection,
+        elastic_token=elastic_token,
+    )
 
 
 if __name__ == "__main__":
