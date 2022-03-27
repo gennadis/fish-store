@@ -22,6 +22,8 @@ from elastic import (
     get_product,
     get_file_href,
     get_product_description,
+    add_product_to_cart,
+    get_cart_items,
 )
 from keyboards import get_menu_markup, get_description_markup
 
@@ -57,6 +59,8 @@ def handle_description(update: Update, context: CallbackContext):
     product = get_product(credential_token=elastic_token, product_id=query.data)
     product_description = get_product_description(product=product)
 
+    context.bot_data["product_id"] = product["data"]["id"]
+
     picture_id = product["data"]["relationships"]["main_image"]["data"]["id"]
     picture_href = get_file_href(credential_token=elastic_token, file_id=picture_id)
 
@@ -66,6 +70,26 @@ def handle_description(update: Update, context: CallbackContext):
         caption=product_description,
         reply_markup=get_description_markup(),
     )
+
+    return State.HANDLE_DESCRIPTION
+
+
+def update_cart(update: Update, context: CallbackContext):
+    query = update.callback_query
+    query.answer()
+
+    elastic_token = context.bot_data.get("elastic")
+    add_product_to_cart(
+        credential_token=elastic_token,
+        product_id=context.bot_data["product_id"],
+        quantity=int(query.data),
+        cart_id=update.effective_user.id,
+    )
+
+    user_cart_items = get_cart_items(
+        credential_token=elastic_token, cart_id=update.effective_user.id
+    )
+    print(user_cart_items)
 
     return State.HANDLE_DESCRIPTION
 
@@ -84,6 +108,7 @@ def run_bot(telegram_token: str, redis_connection: redis.Redis, elastic_token: s
             ],
             State.HANDLE_DESCRIPTION: [
                 CallbackQueryHandler(handle_menu, pattern="back"),
+                CallbackQueryHandler(update_cart, pattern="^[0-9]+$"),
                 CallbackQueryHandler(handle_description),
             ],
         },
