@@ -1,6 +1,7 @@
 import os
 import logging
 import redis
+from enum import Enum, auto
 
 from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -19,6 +20,11 @@ from redis_connection import get_redis_connection
 from elastic import get_credential_token, get_all_products, get_product, get_file_href
 
 logger = logging.getLogger(__file__)
+
+
+class State(Enum):
+    START = auto()
+    HANDLE_MENU = auto()
 
 
 def error_handler(update: Update, context: CallbackContext):
@@ -50,7 +56,7 @@ def start(update: Update, context: CallbackContext):
         reply_markup=products_markup,
     )
 
-    return "HANDLE_MENU"
+    return State.HANDLE_MENU
 
 
 def handle_menu(update: Update, context: CallbackContext):
@@ -66,7 +72,8 @@ def handle_menu(update: Update, context: CallbackContext):
 
     update.effective_message.delete()
     update.effective_user.send_photo(photo=picture_href, caption=product_description)
-    return "START"
+
+    return State.START
 
 
 def handle_users_reply(update: Update, context: CallbackContext):
@@ -82,13 +89,13 @@ def handle_users_reply(update: Update, context: CallbackContext):
         return
 
     if user_reply == "/start":
-        user_state = "START"
+        user_state = State.START
     else:
         user_state = redis_connection.get(chat_id).decode("utf-8")
 
     states_functions = {
-        "START": start,
-        "HANDLE_MENU": handle_menu,
+        State.START: start,
+        State.HANDLE_MENU: handle_menu,
     }
     state_handler = states_functions[user_state]
 
