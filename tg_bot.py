@@ -37,7 +37,7 @@ def handle_menu(update: Update, context: CallbackContext):
     elastic_token = context.bot_data.get("elastic")
     products_markup = get_menu_markup(elastic_token)
 
-    update.message.reply_text(
+    update.effective_message.reply_text(
         text=f"Привет, {user_name}! Я - бот рыбного магазина",
         reply_markup=products_markup,
     )
@@ -79,8 +79,8 @@ def run_bot(telegram_token: str, redis_connection: redis.Redis, elastic_token: s
                 CallbackQueryHandler(handle_menu),
             ],
             State.HANDLE_DESCRIPTION: [
-                CallbackQueryHandler(handle_description),
                 CallbackQueryHandler(handle_menu, pattern="back"),
+                CallbackQueryHandler(handle_description),
             ],
         },
         fallbacks=[],
