@@ -38,12 +38,11 @@ def error_handler(update: Update, context: CallbackContext):
 
 
 def handle_menu(update: Update, context: CallbackContext):
-    user_name = update.effective_user.first_name
     elastic_token = context.bot_data.get("elastic")
     products_markup = get_menu_markup(elastic_token)
 
     update.effective_message.reply_text(
-        text=f"Привет, {user_name}! Я - бот рыбного магазина",
+        text="Welcome to the 'Life Aquatic' exotic aquarium fish store!",
         reply_markup=products_markup,
     )
 
