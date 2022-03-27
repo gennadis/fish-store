@@ -4,7 +4,7 @@ import redis
 from enum import Enum, auto
 
 from dotenv import load_dotenv
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update
 from telegram.ext import Filters, Updater
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 from telegram.ext import (
@@ -17,7 +17,8 @@ from telegram.ext import (
 )
 
 from redis_connection import get_redis_connection
-from elastic import get_credential_token, get_all_products, get_product, get_file_href
+from elastic import get_credential_token, get_product, get_file_href
+from keyboards import get_products_keyboard_markup
 
 logger = logging.getLogger(__file__)
 
@@ -31,25 +32,10 @@ def error_handler(update: Update, context: CallbackContext):
     logger.error(msg="Telegram bot encountered an error", exc_info=context.error)
 
 
-def generate_products_keyboard_markup(elastic_token: str):
-    products = get_all_products(credential_token=elastic_token)["data"]
-    product_names_and_ids = [(product["name"], product["id"]) for product in products]
-
-    keyboard = [
-        [
-            InlineKeyboardButton(text=product_name, callback_data=product_id)
-            for product_name, product_id in product_names_and_ids
-        ]
-    ]
-    products_markup = InlineKeyboardMarkup(keyboard)
-
-    return products_markup
-
-
-def start(update: Update, context: CallbackContext):
+def handle_start(update: Update, context: CallbackContext):
     user_name = update.effective_user.first_name
     elastic_token = context.bot_data.get("elastic")
-    products_markup = generate_products_keyboard_markup(elastic_token)
+    products_markup = get_products_keyboard_markup(elastic_token)
 
     update.message.reply_text(
         text=f"Привет, {user_name}! Я - бот рыбного магазина",
@@ -83,7 +69,7 @@ def run_bot(telegram_token: str, redis_connection: redis.Redis, elastic_token: s
     dispatcher.bot_data["elastic"] = elastic_token
 
     conversation = ConversationHandler(
-        entry_points=[CommandHandler("start", start)],
+        entry_points=[CommandHandler("start", handle_start)],
         states={
             State.HANDLE_MENU: [
                 CallbackQueryHandler(handle_menu),
