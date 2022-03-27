@@ -24,15 +24,15 @@ logger = logging.getLogger(__file__)
 
 
 class State(Enum):
-    START = auto()
     HANDLE_MENU = auto()
+    HANDLE_DESCRIPTION = auto()
 
 
 def error_handler(update: Update, context: CallbackContext):
     logger.error(msg="Telegram bot encountered an error", exc_info=context.error)
 
 
-def start(update: Update, context: CallbackContext):
+def handle_menu(update: Update, context: CallbackContext):
     user_name = update.effective_user.first_name
     elastic_token = context.bot_data.get("elastic")
     products_markup = get_products_keyboard_markup(elastic_token)
@@ -42,10 +42,10 @@ def start(update: Update, context: CallbackContext):
         reply_markup=products_markup,
     )
 
-    return State.HANDLE_MENU
+    return State.HANDLE_DESCRIPTION
 
 
-def handle_product_description_request(update: Update, context: CallbackContext):
+def handle_description(update: Update, context: CallbackContext):
     query = update.callback_query
     query.answer()
 
@@ -59,7 +59,7 @@ def handle_product_description_request(update: Update, context: CallbackContext)
     update.effective_message.delete()
     update.effective_user.send_photo(photo=picture_href, caption=product_description)
 
-    return State.START
+    return State.HANDLE_DESCRIPTION
 
 
 def run_bot(telegram_token: str, redis_connection: redis.Redis, elastic_token: str):
@@ -69,10 +69,13 @@ def run_bot(telegram_token: str, redis_connection: redis.Redis, elastic_token: s
     dispatcher.bot_data["elastic"] = elastic_token
 
     conversation = ConversationHandler(
-        entry_points=[CommandHandler("start", start)],
+        entry_points=[CommandHandler("start", handle_menu)],
         states={
             State.HANDLE_MENU: [
-                CallbackQueryHandler(handle_product_description_request),
+                CallbackQueryHandler(handle_menu),
+            ],
+            State.HANDLE_DESCRIPTION: [
+                CallbackQueryHandler(handle_description),
             ],
         },
         fallbacks=[],
