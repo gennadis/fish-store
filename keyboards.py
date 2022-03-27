@@ -15,3 +15,10 @@ def get_products_keyboard_markup(elastic_token: str):
     products_markup = InlineKeyboardMarkup(keyboard)
 
     return products_markup
+
+
+def get_description_markup():
+    keyboard = [[InlineKeyboardButton(text="Back to menu", callback_data="back")]]
+    description_markup = InlineKeyboardMarkup(keyboard)
+
+    return description_markup

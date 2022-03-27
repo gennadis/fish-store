@@ -18,7 +18,7 @@ from telegram.ext import (
 
 from redis_connection import get_redis_connection
 from elastic import get_credential_token, get_product, get_file_href
-from keyboards import get_products_keyboard_markup
+from keyboards import get_products_keyboard_markup, get_description_markup
 
 logger = logging.getLogger(__file__)
 
@@ -57,7 +57,11 @@ def handle_description(update: Update, context: CallbackContext):
     picture_href = get_file_href(credential_token=elastic_token, file_id=picture_id)
 
     update.effective_message.delete()
-    update.effective_user.send_photo(photo=picture_href, caption=product_description)
+    update.effective_user.send_photo(
+        photo=picture_href,
+        caption=product_description,
+        reply_markup=get_description_markup(),
+    )
 
     return State.HANDLE_DESCRIPTION
 
@@ -76,6 +80,7 @@ def run_bot(telegram_token: str, redis_connection: redis.Redis, elastic_token: s
             ],
             State.HANDLE_DESCRIPTION: [
                 CallbackQueryHandler(handle_description),
+                CallbackQueryHandler(handle_menu, pattern="back"),
             ],
         },
         fallbacks=[],
