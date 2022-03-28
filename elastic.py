@@ -42,6 +42,18 @@ def add_product_to_cart(
     return response.json()
 
 
+def delete_product_from_cart(
+    credential_token: str, product_id: str, quantity: int, cart_id: str
+) -> dict:
+    headers = {"Authorization": f"Bearer {credential_token}"}
+    response = requests.delete(
+        f"https://api.moltin.com/v2/carts/{cart_id}/items/{product_id}", headers=headers
+    )
+    response.raise_for_status()
+
+    return response.json()
+
+
 def get_cart(credential_token: str, cart_id: str) -> dict:
     headers = {"Authorization": f"Bearer {credential_token}"}
     response = requests.get(
