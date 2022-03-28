@@ -33,8 +33,14 @@ def get_description_markup():
     return description_markup
 
 
-def get_cart_markup():
+def get_cart_markup(cart_items: dict):
     keyboard = [
+        [
+            InlineKeyboardButton(
+                f"Remove {product['name']} from cart", callback_data=product["id"]
+            )
+            for product in cart_items["data"]
+        ],
         [InlineKeyboardButton(text="Back to menu", callback_data="back")],
     ]
     cart_markup = InlineKeyboardMarkup(keyboard)

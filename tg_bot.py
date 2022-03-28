@@ -96,14 +96,19 @@ def handle_cart(update: Update, context: CallbackContext):
     query.answer()
 
     elastic_token = context.bot_data.get("elastic")
+    cart_items = get_cart_items(
+        credential_token=elastic_token,
+        cart_id=update.effective_user.id,
+    )
     cart_summary = get_cart_summary(
-        credential_token=elastic_token, cart_id=update.effective_user.id
+        credential_token=elastic_token,
+        cart_id=update.effective_user.id,
     )
 
     update.effective_message.delete()
     update.effective_user.send_message(
         text=cart_summary,
-        reply_markup=get_cart_markup(),
+        reply_markup=get_cart_markup(cart_items=cart_items),
     )
 
     return State.HANDLE_CART
