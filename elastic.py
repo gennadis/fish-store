@@ -116,8 +116,7 @@ def get_product_summary_text(
 ) -> str:
     formatted_price = "{:.2f}".format(price)
     formatted_subtotal = "{:.2f}".format(price * quantity)
-    product_summary_text = dedent(
-        f"""\
+    product_summary_text = f"""
         Name: {name}
         ------
         Price: ${formatted_price} per unit
@@ -125,11 +124,12 @@ def get_product_summary_text(
         Subtotal: ${formatted_subtotal}
         ------
         Description: {description}
-        ------
+        ------------
         """
+    formatted_product_summary_text = "\n".join(
+        line.strip() for line in product_summary_text.splitlines()
     )
-
-    return product_summary_text
+    return formatted_product_summary_text
 
 
 def get_file_href(credential_token: str, file_id: str) -> str:

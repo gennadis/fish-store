@@ -61,15 +61,15 @@ def handle_description(update: Update, context: CallbackContext) -> State:
     product = elastic.get_product(credential_token=elastic_token, product_id=query.data)
 
     product_details = product["data"]
-    product_description = dedent(
-        f"""
+    product_description = f"""
         Name: {product_details['name']}
         ------
         Price: {product_details['meta']['display_price']['with_tax']['formatted']} per unit
         Stock: {product_details['meta']['stock']['level']} units available
         ------
-        Description: {product_details['description']}
-        """
+        Description: {product_details['description']}"""
+    formatted_product_description = "\n".join(
+        line.strip() for line in product_description.splitlines()
     )
 
     context.bot_data["product_id"] = product["data"]["id"]
@@ -81,7 +81,7 @@ def handle_description(update: Update, context: CallbackContext) -> State:
 
     update.effective_user.send_photo(
         photo=picture_href,
-        caption=product_description,
+        caption=formatted_product_description,
         reply_markup=keyboards.get_description_markup(),
     )
     update.effective_message.delete()
