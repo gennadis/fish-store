@@ -2,7 +2,7 @@ from elastic import get_all_products
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 
-def get_menu_markup(elastic_token: str):
+def get_menu_markup(elastic_token: str) -> InlineKeyboardMarkup:
     products = get_all_products(credential_token=elastic_token)["data"]
     product_names_and_ids = [(product["name"], product["id"]) for product in products]
 
@@ -18,7 +18,7 @@ def get_menu_markup(elastic_token: str):
     return menu_markup
 
 
-def get_description_markup():
+def get_description_markup() -> InlineKeyboardMarkup:
     keyboard = [
         [
             InlineKeyboardButton("1 unit", callback_data=1),
@@ -33,7 +33,7 @@ def get_description_markup():
     return description_markup
 
 
-def get_cart_markup(cart_items: dict):
+def get_cart_markup(cart_items: dict) -> InlineKeyboardMarkup:
     keyboard = [
         [
             InlineKeyboardButton(
@@ -49,7 +49,7 @@ def get_cart_markup(cart_items: dict):
     return cart_markup
 
 
-def get_email_markup():
+def get_email_markup() -> InlineKeyboardMarkup:
     keyboard = [
         [InlineKeyboardButton(text="Back to menu", callback_data="back")],
     ]

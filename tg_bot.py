@@ -1,41 +1,24 @@
-import email
 import logging
 import os
-import redis
 from enum import Enum, auto
 
+import redis
 from dotenv import load_dotenv
 from telegram import Update
-from telegram.ext import Filters, Updater
-from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 from telegram.ext import (
-    Updater,
-    CommandHandler,
-    MessageHandler,
-    Filters,
-    ConversationHandler,
     CallbackContext,
+    CallbackQueryHandler,
+    CommandHandler,
+    ConversationHandler,
+    Filters,
+    MessageHandler,
+    Updater,
 )
 
+import elastic
+import keyboards
 from redis_connection import get_redis_connection
-from elastic import (
-    get_credential_token,
-    get_product,
-    get_file_href,
-    get_product_description,
-    add_product_to_cart,
-    get_cart_items,
-    get_cart_summary,
-    delete_product_from_cart,
-    create_customer,
-    get_customer,
-)
-from keyboards import (
-    get_menu_markup,
-    get_description_markup,
-    get_cart_markup,
-    get_email_markup,
-)
+
 
 logger = logging.getLogger(__file__)
 
@@ -51,9 +34,9 @@ def error_handler(update: Update, context: CallbackContext):
     logger.error(msg="Telegram bot encountered an error", exc_info=context.error)
 
 
-def handle_menu(update: Update, context: CallbackContext):
+def handle_menu(update: Update, context: CallbackContext) -> State:
     elastic_token = context.bot_data.get("elastic")
-    products_markup = get_menu_markup(elastic_token)
+    products_markup = keyboards.get_menu_markup(elastic_token)
 
     update.effective_message.reply_text(
         text="Welcome to the 'Life Aquatic' exotic aquarium fish store!",
@@ -63,35 +46,37 @@ def handle_menu(update: Update, context: CallbackContext):
     return State.HANDLE_DESCRIPTION
 
 
-def handle_description(update: Update, context: CallbackContext):
+def handle_description(update: Update, context: CallbackContext) -> State:
     query = update.callback_query
     query.answer()
 
     elastic_token = context.bot_data.get("elastic")
-    product = get_product(credential_token=elastic_token, product_id=query.data)
-    product_description = get_product_description(product=product)
+    product = elastic.get_product(credential_token=elastic_token, product_id=query.data)
+    product_description = elastic.get_product_description(product=product)
 
     context.bot_data["product_id"] = product["data"]["id"]
 
     picture_id = product["data"]["relationships"]["main_image"]["data"]["id"]
-    picture_href = get_file_href(credential_token=elastic_token, file_id=picture_id)
+    picture_href = elastic.get_file_href(
+        credential_token=elastic_token, file_id=picture_id
+    )
 
     update.effective_message.delete()
     update.effective_user.send_photo(
         photo=picture_href,
         caption=product_description,
-        reply_markup=get_description_markup(),
+        reply_markup=keyboards.get_description_markup(),
     )
 
     return State.HANDLE_DESCRIPTION
 
 
-def update_cart(update: Update, context: CallbackContext):
+def update_cart(update: Update, context: CallbackContext) -> State:
     query = update.callback_query
     query.answer()
 
     elastic_token = context.bot_data.get("elastic")
-    add_product_to_cart(
+    elastic.add_product_to_cart(
         credential_token=elastic_token,
         product_id=context.bot_data["product_id"],
         quantity=int(query.data),
@@ -101,23 +86,23 @@ def update_cart(update: Update, context: CallbackContext):
     return State.HANDLE_DESCRIPTION
 
 
-def handle_cart(update: Update, context: CallbackContext):
+def handle_cart(update: Update, context: CallbackContext) -> State:
     query = update.callback_query
     query.answer()
 
     elastic_token = context.bot_data.get("elastic")
-    cart_items = get_cart_items(
+    cart_items = elastic.get_cart_items(
         credential_token=elastic_token,
         cart_id=update.effective_user.id,
     )
-    cart_summary = get_cart_summary(
+    cart_summary = elastic.get_cart_summary(
         credential_token=elastic_token,
         cart_id=update.effective_user.id,
     )
 
     product_id = query.data
     if product_id in [product["id"] for product in cart_items["data"]]:
-        delete_product_from_cart(
+        elastic.delete_product_from_cart(
             credential_token=elastic_token,
             cart_id=update.effective_user.id,
             product_id=query.data,
@@ -126,34 +111,34 @@ def handle_cart(update: Update, context: CallbackContext):
     update.effective_message.delete()
     update.effective_user.send_message(
         text=cart_summary,
-        reply_markup=get_cart_markup(cart_items=cart_items),
+        reply_markup=keyboards.get_cart_markup(cart_items=cart_items),
     )
 
     return State.HANDLE_CART
 
 
-def handle_user_email(update: Update, context: CallbackContext):
+def handle_user_email(update: Update, context: CallbackContext) -> State:
     query = update.callback_query
     query.answer()
 
     update.effective_user.send_message(
         text="Please leave your email to get a call from our manager",
-        reply_markup=get_email_markup(),
+        reply_markup=keyboards.get_email_markup(),
     )
 
     return State.WAITING_EMAIL
 
 
-def handle_customer_creation(update: Update, context: CallbackContext):
+def handle_customer_creation(update: Update, context: CallbackContext) -> State:
     elastic_token = context.bot_data.get("elastic")
 
-    creation_status = create_customer(
+    creation_status = elastic.create_customer(
         credential_token=elastic_token,
         user_id=update.effective_user.id,
         email=update.message.text,
     )["data"]
 
-    customer = get_customer(
+    customer = elastic.get_customer(
         credential_token=elastic_token, customer_id=creation_status["id"]
     )["data"]
 
@@ -163,7 +148,7 @@ Your order ID is {customer['id'].split('-')[0]}.
 Thank you for placing an order in 'Life Aquatic' store.
 Our manager will get in touch with you soon on {customer['email']}.
 """,
-        reply_markup=get_email_markup(),
+        reply_markup=keyboards.get_email_markup(),
     )
 
     return State.HANDLE_MENU
@@ -206,6 +191,7 @@ def run_bot(telegram_token: str, redis_connection: redis.Redis, elastic_token: s
 
     updater.start_polling()
     updater.idle()
+
     logger.info("Telegram bot started")
 
 
@@ -215,17 +201,15 @@ def main():
     load_dotenv()
     telegram_token = os.getenv("TELEGRAM_TOKEN")
 
-    elastic_client_id = os.getenv("ELASTICPATH_CLIENT_ID")
-    elastic_client_secret = os.getenv("ELASTICPATH_CLIENT_SECRET")
-    elastic_token = get_credential_token(elastic_client_id, elastic_client_secret)
+    elastic_token = elastic.get_credential_token(
+        client_id=os.getenv("ELASTICPATH_CLIENT_ID"),
+        client_secret=os.getenv("ELASTICPATH_CLIENT_SECRET"),
+    )
 
-    redis_address = os.getenv("REDIS_ADDRESS")
-    redis_name = os.getenv("REDIS_NAME")
-    redis_password = os.getenv("REDIS_PASSWORD")
     redis_connection = get_redis_connection(
-        redis_address=redis_address,
-        redis_name=redis_name,
-        redis_password=redis_password,
+        redis_address=os.getenv("REDIS_ADDRESS"),
+        redis_name=os.getenv("REDIS_NAME"),
+        redis_password=os.getenv("REDIS_PASSWORD"),
     )
 
     run_bot(
