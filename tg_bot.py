@@ -63,12 +63,12 @@ def handle_description(update: Update, context: CallbackContext) -> State:
         credential_token=elastic_token, file_id=picture_id
     )
 
-    update.effective_message.delete()
     update.effective_user.send_photo(
         photo=picture_href,
         caption=product_description,
         reply_markup=keyboards.get_description_markup(),
     )
+    update.effective_message.delete()
 
     return State.HANDLE_DESCRIPTION
 
@@ -106,11 +106,11 @@ def handle_cart(update: Update, context: CallbackContext) -> State:
             product_id=query.data,
         )
 
-    update.effective_message.delete()
     update.effective_user.send_message(
         text=tg_bot_messages.get_cart_summary_text(cart_items=cart_items["data"]),
         reply_markup=keyboards.get_cart_markup(cart_items=cart_items),
     )
+    update.effective_message.delete()
 
     return State.HANDLE_CART
 
