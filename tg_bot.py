@@ -1,3 +1,4 @@
+import email
 import logging
 import os
 import redis
@@ -26,6 +27,8 @@ from elastic import (
     get_cart_items,
     get_cart_summary,
     delete_product_from_cart,
+    create_customer,
+    get_customer,
 )
 from keyboards import (
     get_menu_markup,
@@ -141,9 +144,29 @@ def handle_user_email(update: Update, context: CallbackContext):
     return State.WAITING_EMAIL
 
 
-def test_email(update: Update, context: CallbackContext):
+def handle_customer_creation(update: Update, context: CallbackContext):
+    elastic_token = context.bot_data.get("elastic")
 
-    print(update.message.text)
+    creation_status = create_customer(
+        credential_token=elastic_token,
+        user_id=update.effective_user.id,
+        email=update.message.text,
+    )["data"]
+
+    customer = get_customer(
+        credential_token=elastic_token, customer_id=creation_status["id"]
+    )["data"]
+
+    update.effective_user.send_message(
+        text=f"""
+Your order ID is {customer['id'].split('-')[0]}.
+Thank you for placing an order in 'Life Aquatic' store.
+Our manager will get in touch with you soon on {customer['email']}.
+""",
+        reply_markup=get_email_markup(),
+    )
+
+    return State.HANDLE_MENU
 
 
 def run_bot(telegram_token: str, redis_connection: redis.Redis, elastic_token: str):
@@ -171,7 +194,7 @@ def run_bot(telegram_token: str, redis_connection: redis.Redis, elastic_token: s
                 CallbackQueryHandler(handle_cart),
             ],
             State.WAITING_EMAIL: [
-                MessageHandler(Filters.text, test_email),
+                MessageHandler(Filters.text, handle_customer_creation),
                 CallbackQueryHandler(handle_cart, pattern="back"),
                 CallbackQueryHandler(handle_user_email),
             ],
