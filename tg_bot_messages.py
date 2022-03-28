@@ -33,36 +33,43 @@ Description: {product_details['description']}
 
 
 def get_product_summary_text(
-    name: str, price: str, quantity: str, description: str
+    name: str, price: int, quantity: int, description: str
 ) -> str:
+    formatted_price = "{:.2f}".format(price)
+    formatted_subtotal = "{:.2f}".format(price * quantity)
     return f"""
 Name: {name}
 ------
-Price: {price} per unit
+Price: ${formatted_price} per unit
 Quantity: {quantity} units
-Subtotal: ${float(price.strip('$')) * int(quantity)}
+Subtotal: ${formatted_subtotal}
 ------
 Description: {description}
 ------------------------
 """
 
 
-def get_cart_summary_text(cart: dict, cart_items: dict) -> str:
-    cart_total_price = cart["meta"]["display_price"]["with_tax"]["formatted"]
-
+def get_cart_summary_text(cart_items: dict) -> str:
+    total_price = 0
     products = []
-    for product in cart_items:
-        product_summary = get_product_summary_text(
-            name=product["name"],
-            price=product["meta"]["display_price"]["without_tax"]["value"]["formatted"],
-            quantity=product["quantity"],
-            description=product["description"],
-        )
 
+    for product in cart_items:
+        name = product["name"]
+        price = (product["value"]["amount"]) / 100
+        quantity = product["quantity"]
+        description = product["description"]
+
+        total_price += price * quantity
+
+        product_summary: str = get_product_summary_text(
+            name, price, quantity, description
+        )
         products.append(product_summary)
 
-    message_first_line = f"TOTAL: {cart_total_price}"
-    message_other_lines = "\n".join(products)
-    cart_summary = f"{message_first_line}\n{message_other_lines}"
+    formatted_total_price = "{:.2f}".format(total_price)
+    message_total_price = f"TOTAL: ${formatted_total_price}"
+
+    message_products_lines = "\n".join(products)
+    cart_summary = f"{message_total_price}\n{message_products_lines}"
 
     return cart_summary
