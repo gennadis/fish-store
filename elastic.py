@@ -1,4 +1,5 @@
 import requests
+from textwrap import dedent
 
 
 def get_credential_token(client_id: str, client_secret: str) -> str:
@@ -74,6 +75,32 @@ def get_cart_items(credential_token: str, cart_id: str) -> dict:
     return response.json()
 
 
+def get_cart_summary_text(cart_items: dict) -> str:
+    total_price = 0
+    products = []
+
+    for product in cart_items:
+        name = product["name"]
+        price = (product["value"]["amount"]) / 100
+        quantity = product["quantity"]
+        description = product["description"]
+
+        total_price += price * quantity
+
+        product_summary: str = get_product_summary_text(
+            name, price, quantity, description
+        )
+        products.append(product_summary)
+
+    formatted_total_price = "{:.2f}".format(total_price)
+    message_total_price = f"TOTAL: ${formatted_total_price}"
+
+    message_products_lines = "\n".join(products)
+    cart_summary = f"{message_total_price}\n{message_products_lines}"
+
+    return cart_summary
+
+
 def get_product(credential_token: str, product_id: str) -> dict:
     headers = {"Authorization": f"Bearer {credential_token}"}
     response = requests.get(
@@ -82,6 +109,27 @@ def get_product(credential_token: str, product_id: str) -> dict:
     response.raise_for_status()
 
     return response.json()
+
+
+def get_product_summary_text(
+    name: str, price: int, quantity: int, description: str
+) -> str:
+    formatted_price = "{:.2f}".format(price)
+    formatted_subtotal = "{:.2f}".format(price * quantity)
+    product_summary_text = dedent(
+        f"""\
+        Name: {name}
+        ------
+        Price: ${formatted_price} per unit
+        Quantity: {quantity} units
+        Subtotal: ${formatted_subtotal}
+        ------
+        Description: {description}
+        ------
+        """
+    )
+
+    return product_summary_text
 
 
 def get_file_href(credential_token: str, file_id: str) -> str:

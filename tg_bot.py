@@ -1,6 +1,7 @@
 import logging
 import os
 from enum import Enum, auto
+from textwrap import dedent
 
 import redis
 from dotenv import load_dotenv
@@ -17,7 +18,6 @@ from telegram.ext import (
 
 import elastic
 import keyboards
-import tg_bot_messages
 from redis_connection import get_redis_connection
 
 
@@ -41,7 +41,12 @@ def handle_menu(update: Update, context: CallbackContext) -> State:
     products_markup = keyboards.get_menu_markup(elastic_token)
 
     update.effective_message.reply_text(
-        text=tg_bot_messages.get_start_text(user_name=user_first_name),
+        text=dedent(
+            f"""
+            Hi, {user_first_name}! 
+            Welcome to the 'Life Aquatic' exotic aquarium fish store!
+            """
+        ),
         reply_markup=products_markup,
     )
 
@@ -54,7 +59,18 @@ def handle_description(update: Update, context: CallbackContext) -> State:
 
     elastic_token = context.bot_data.get("elastic")
     product = elastic.get_product(credential_token=elastic_token, product_id=query.data)
-    product_description = tg_bot_messages.get_product_description_text(product=product)
+
+    product_details = product["data"]
+    product_description = dedent(
+        f"""
+        Name: {product_details['name']}
+        ------
+        Price: {product_details['meta']['display_price']['with_tax']['formatted']} per unit
+        Stock: {product_details['meta']['stock']['level']} units available
+        ------
+        Description: {product_details['description']}
+        """
+    )
 
     context.bot_data["product_id"] = product["data"]["id"]
 
@@ -107,7 +123,7 @@ def handle_cart(update: Update, context: CallbackContext) -> State:
         )
 
     update.effective_user.send_message(
-        text=tg_bot_messages.get_cart_summary_text(cart_items=cart_items["data"]),
+        text=elastic.get_cart_summary_text(cart_items=cart_items["data"]),
         reply_markup=keyboards.get_cart_markup(cart_items=cart_items),
     )
     update.effective_message.delete()
@@ -121,7 +137,12 @@ def handle_user_email(update: Update, context: CallbackContext) -> State:
     query.answer()
 
     update.effective_user.send_message(
-        text=tg_bot_messages.get_user_email_text(user_name=user_first_name),
+        text=dedent(
+            f"""
+            Dear {user_first_name},
+            please leave your email to get a call from our manager.
+            """
+        ),
         reply_markup=keyboards.get_email_markup(),
     )
 
@@ -142,9 +163,12 @@ def handle_customer_creation(update: Update, context: CallbackContext) -> State:
     )["data"]
 
     update.effective_user.send_message(
-        text=tg_bot_messages.get_customer_creation_text(
-            customer_id=customer["id"].split("-")[0],
-            customer_email=customer["email"],
+        text=dedent(
+            f"""
+            Your order ID is {customer["id"].split("-")[0]}.
+            Thank you for placing order in 'Life Aquatic' store.
+            Our manager will get in touch with you soon on {customer["email"]}.
+            """
         ),
         reply_markup=keyboards.get_email_markup(),
     )
