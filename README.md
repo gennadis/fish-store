@@ -1,7 +1,7 @@
 # Fish Store Telegram Bot
 
 This project is a simple telegram store bot for your Fish Store.
-Powered by [Elasticpath Commerce Cloud CMS][https://www.elasticpath.com/elastic-path-commerce-cloud]
+Powered by [Elasticpath Commerce Cloud CMS](https://www.elasticpath.com/elastic-path-commerce-cloud)
 
 ## Examples
 Try this telegram bot: `@dvmn_fish_store_bot`
