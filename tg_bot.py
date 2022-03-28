@@ -25,6 +25,7 @@ from elastic import (
     add_product_to_cart,
     get_cart_items,
     get_cart_summary,
+    delete_product_from_cart,
 )
 from keyboards import get_menu_markup, get_description_markup, get_cart_markup
 
@@ -105,6 +106,15 @@ def handle_cart(update: Update, context: CallbackContext):
         cart_id=update.effective_user.id,
     )
 
+    print(cart_items)
+    product_id = query.data
+    if product_id in [product["id"] for product in cart_items["data"]]:
+        deletion_status = delete_product_from_cart(
+            credential_token=elastic_token,
+            cart_id=update.effective_user.id,
+            product_id=query.data,
+        )
+        print(deletion_status)
     update.effective_message.delete()
     update.effective_user.send_message(
         text=cart_summary,
