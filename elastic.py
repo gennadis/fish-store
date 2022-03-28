@@ -143,17 +143,27 @@ def get_file_href(credential_token: str, file_id: str) -> str:
 
 def create_customer(credential_token: str, user_id: str, email: str) -> dict:
     headers = {"Authorization": f"Bearer {credential_token}"}
-    json_data = {
+    payload = {
         "data": {
             "type": "customer",
-            "name": user_id,
-            "email": email,
-            "password": user_id,
+            "name": str(user_id),
+            "email": str(email),
+            "password": "mysecretpassword",
         },
     }
 
     response = requests.post(
-        "https://api.moltin.com/v2/customers", headers=headers, json=json_data
+        "https://api.moltin.com/v2/customers", headers=headers, json=payload
+    )
+    response.raise_for_status()
+
+    return response.json()
+
+
+def get_customer(credential_token: str, customer_id: str) -> dict:
+    headers = {"Authorization": f"Bearer {credential_token}"}
+    response = requests.get(
+        f"https://api.moltin.com/v2/customers/{customer_id}", headers=headers
     )
     response.raise_for_status()
 
