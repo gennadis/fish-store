@@ -139,3 +139,22 @@ def get_file_href(credential_token: str, file_id: str) -> str:
     file_details = response.json()["data"]
 
     return file_details["link"]["href"]
+
+
+def create_customer(credential_token: str, user_id: str, email: str) -> dict:
+    headers = {"Authorization": f"Bearer {credential_token}"}
+    json_data = {
+        "data": {
+            "type": "customer",
+            "name": user_id,
+            "email": email,
+            "password": user_id,
+        },
+    }
+
+    response = requests.post(
+        "https://api.moltin.com/v2/customers", headers=headers, json=json_data
+    )
+    response.raise_for_status()
+
+    return response.json()
