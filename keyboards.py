@@ -41,8 +41,18 @@ def get_cart_markup(cart_items: dict):
             )
             for product in cart_items["data"]
         ],
+        [InlineKeyboardButton(text="Check out", callback_data="checkout")],
         [InlineKeyboardButton(text="Back to menu", callback_data="back")],
     ]
     cart_markup = InlineKeyboardMarkup(keyboard)
 
     return cart_markup
+
+
+def get_email_markup():
+    keyboard = [
+        [InlineKeyboardButton(text="Back to menu", callback_data="back")],
+    ]
+    email_markup = InlineKeyboardMarkup(keyboard)
+
+    return email_markup
