@@ -1,7 +1,5 @@
 import redis
 
-REDIS_USERS_HASH_NAME = "fish_store_customers"
-
 
 def get_redis_connection(
     redis_address: str, redis_name: str, redis_password: str
