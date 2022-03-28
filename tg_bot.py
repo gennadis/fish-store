@@ -27,7 +27,12 @@ from elastic import (
     get_cart_summary,
     delete_product_from_cart,
 )
-from keyboards import get_menu_markup, get_description_markup, get_cart_markup
+from keyboards import (
+    get_menu_markup,
+    get_description_markup,
+    get_cart_markup,
+    get_email_markup,
+)
 
 logger = logging.getLogger(__file__)
 
@@ -36,6 +41,7 @@ class State(Enum):
     HANDLE_MENU = auto()
     HANDLE_DESCRIPTION = auto()
     HANDLE_CART = auto()
+    WAITING_EMAIL = auto()
 
 
 def error_handler(update: Update, context: CallbackContext):
@@ -106,15 +112,14 @@ def handle_cart(update: Update, context: CallbackContext):
         cart_id=update.effective_user.id,
     )
 
-    print(cart_items)
     product_id = query.data
     if product_id in [product["id"] for product in cart_items["data"]]:
-        deletion_status = delete_product_from_cart(
+        delete_product_from_cart(
             credential_token=elastic_token,
             cart_id=update.effective_user.id,
             product_id=query.data,
         )
-        print(deletion_status)
+
     update.effective_message.delete()
     update.effective_user.send_message(
         text=cart_summary,
@@ -122,6 +127,23 @@ def handle_cart(update: Update, context: CallbackContext):
     )
 
     return State.HANDLE_CART
+
+
+def handle_user_email(update: Update, context: CallbackContext):
+    query = update.callback_query
+    query.answer()
+
+    update.effective_user.send_message(
+        text="Please leave your email to get a call from our manager",
+        reply_markup=get_email_markup(),
+    )
+
+    return State.WAITING_EMAIL
+
+
+def test_email(update: Update, context: CallbackContext):
+
+    print(update.message.text)
 
 
 def run_bot(telegram_token: str, redis_connection: redis.Redis, elastic_token: str):
@@ -145,7 +167,13 @@ def run_bot(telegram_token: str, redis_connection: redis.Redis, elastic_token: s
             ],
             State.HANDLE_CART: [
                 CallbackQueryHandler(handle_menu, pattern="back"),
+                CallbackQueryHandler(handle_user_email, pattern="checkout"),
                 CallbackQueryHandler(handle_cart),
+            ],
+            State.WAITING_EMAIL: [
+                MessageHandler(Filters.text, test_email),
+                CallbackQueryHandler(handle_cart, pattern="back"),
+                CallbackQueryHandler(handle_user_email),
             ],
         },
         fallbacks=[],
