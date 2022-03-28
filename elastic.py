@@ -43,7 +43,7 @@ def add_product_to_cart(
 
 
 def delete_product_from_cart(
-    credential_token: str, product_id: str, quantity: int, cart_id: str
+    credential_token: str, cart_id: str, product_id: str
 ) -> dict:
     headers = {"Authorization": f"Bearer {credential_token}"}
     response = requests.delete(
