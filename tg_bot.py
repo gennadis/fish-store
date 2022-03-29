@@ -1,4 +1,3 @@
-import functools
 import logging
 import os
 import time
@@ -38,21 +37,30 @@ def error_handler(update: Update, context: CallbackContext):
     logger.error(msg="Telegram bot encountered an error", exc_info=context.error)
 
 
-def validate_token(function_to_decorate):
-    def wrapper(update, context):
+def validate_token_expiration(function_to_decorate):
+    def wrapper(*args, **kwagrs):
+        update, context = args
         token_expiration_time = context.bot_data.get("token_expires")
-        print(token_expiration_time)
+        current_time = time.time()
 
-        function_to_decorate(update, context)
+        if current_time >= token_expiration_time:
+            logger.info("Getting new Elastic token due to expiration.")
 
-        # if token_expiration_time <= time.time():
-        #     print("token_expired")
-        # TODO: implement token renewal here...
+            client_id, client_secret = get_elastic_credentials_for_decorator()
+            new_elastic_token = elastic.get_credential_token(client_id, client_secret)
+
+            context.bot_data["elastic"] = new_elastic_token["access_token"]
+            context.bot_data["token_expires"] = new_elastic_token["expires"]
+
+            updated_args = update, context
+            return function_to_decorate(*updated_args, **kwagrs)
+
+        return function_to_decorate(*args, **kwagrs)
 
     return wrapper
 
 
-@validate_token
+@validate_token_expiration
 def handle_menu(update: Update, context: CallbackContext) -> State:
     user_first_name = update.effective_user.first_name
     elastic_token = context.bot_data.get("elastic")
@@ -71,7 +79,7 @@ def handle_menu(update: Update, context: CallbackContext) -> State:
     return State.HANDLE_DESCRIPTION
 
 
-@validate_token
+@validate_token_expiration
 def handle_description(update: Update, context: CallbackContext) -> State:
     query = update.callback_query
     query.answer()
@@ -108,7 +116,7 @@ def handle_description(update: Update, context: CallbackContext) -> State:
     return State.HANDLE_DESCRIPTION
 
 
-@validate_token
+@validate_token_expiration
 def update_cart(update: Update, context: CallbackContext) -> State:
     query = update.callback_query
     query.answer()
@@ -124,7 +132,7 @@ def update_cart(update: Update, context: CallbackContext) -> State:
     return State.HANDLE_DESCRIPTION
 
 
-@validate_token
+@validate_token_expiration
 def handle_cart(update: Update, context: CallbackContext) -> State:
     query = update.callback_query
     query.answer()
@@ -152,7 +160,7 @@ def handle_cart(update: Update, context: CallbackContext) -> State:
     return State.HANDLE_CART
 
 
-@validate_token
+@validate_token_expiration
 def handle_user_email(update: Update, context: CallbackContext) -> State:
     user_first_name = update.effective_user.first_name
     query = update.callback_query
@@ -171,7 +179,7 @@ def handle_user_email(update: Update, context: CallbackContext) -> State:
     return State.WAITING_EMAIL
 
 
-@validate_token
+@validate_token_expiration
 def handle_customer_creation(update: Update, context: CallbackContext) -> State:
     elastic_token = context.bot_data.get("elastic")
 
@@ -239,6 +247,14 @@ def run_bot(telegram_token: str, redis_connection: redis.Redis, elastic_token: s
     updater.idle()
 
     logger.info("Telegram bot started")
+
+
+def get_elastic_credentials_for_decorator() -> tuple[str, str]:
+    load_dotenv()
+    client_id = os.getenv("ELASTICPATH_CLIENT_ID")
+    client_secret = os.getenv("ELASTICPATH_CLIENT_SECRET")
+
+    return client_id, client_secret
 
 
 def main():
