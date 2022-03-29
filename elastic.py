@@ -1,5 +1,8 @@
+import os
+import time
+
 import requests
-from textwrap import dedent
+from dotenv import load_dotenv
 
 
 def get_credential_token(client_id: str, client_secret: str) -> str:
@@ -11,7 +14,15 @@ def get_credential_token(client_id: str, client_secret: str) -> str:
     response = requests.post("https://api.moltin.com/oauth/access_token", data=data)
     response.raise_for_status()
 
-    return response.json()["access_token"]
+    return response.json()
+
+
+def get_new_credential_token(
+    credential_token: dict, client_id: str, client_secret: str
+):
+    if credential_token["expires"] <= time.time():
+        new_credential_token = get_credential_token(client_id, client_secret)
+        return new_credential_token
 
 
 def get_all_products(credential_token: str) -> dict:
@@ -170,3 +181,20 @@ def get_customer(credential_token: str, customer_id: str) -> dict:
     response.raise_for_status()
 
     return response.json()
+
+
+def main():
+
+    load_dotenv()
+
+    elastic_token = get_credential_token(
+        client_id=os.getenv("ELASTICPATH_CLIENT_ID"),
+        client_secret=os.getenv("ELASTICPATH_CLIENT_SECRET"),
+    )
+    elastic_token_expiration_time = elastic_token["expires"]
+    print(elastic_token_expiration_time)
+    print(time())
+
+
+if __name__ == "__main__":
+    main()

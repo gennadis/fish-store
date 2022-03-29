@@ -1,7 +1,10 @@
+import functools
 import logging
 import os
+import time
 from enum import Enum, auto
 from textwrap import dedent
+
 
 import redis
 from dotenv import load_dotenv
@@ -35,6 +38,21 @@ def error_handler(update: Update, context: CallbackContext):
     logger.error(msg="Telegram bot encountered an error", exc_info=context.error)
 
 
+def validate_token(function_to_decorate):
+    def wrapper(update, context):
+        token_expiration_time = context.bot_data.get("token_expires")
+        print(token_expiration_time)
+
+        function_to_decorate(update, context)
+
+        # if token_expiration_time <= time.time():
+        #     print("token_expired")
+        # TODO: implement token renewal here...
+
+    return wrapper
+
+
+@validate_token
 def handle_menu(update: Update, context: CallbackContext) -> State:
     user_first_name = update.effective_user.first_name
     elastic_token = context.bot_data.get("elastic")
@@ -53,6 +71,7 @@ def handle_menu(update: Update, context: CallbackContext) -> State:
     return State.HANDLE_DESCRIPTION
 
 
+@validate_token
 def handle_description(update: Update, context: CallbackContext) -> State:
     query = update.callback_query
     query.answer()
@@ -89,6 +108,7 @@ def handle_description(update: Update, context: CallbackContext) -> State:
     return State.HANDLE_DESCRIPTION
 
 
+@validate_token
 def update_cart(update: Update, context: CallbackContext) -> State:
     query = update.callback_query
     query.answer()
@@ -104,6 +124,7 @@ def update_cart(update: Update, context: CallbackContext) -> State:
     return State.HANDLE_DESCRIPTION
 
 
+@validate_token
 def handle_cart(update: Update, context: CallbackContext) -> State:
     query = update.callback_query
     query.answer()
@@ -131,6 +152,7 @@ def handle_cart(update: Update, context: CallbackContext) -> State:
     return State.HANDLE_CART
 
 
+@validate_token
 def handle_user_email(update: Update, context: CallbackContext) -> State:
     user_first_name = update.effective_user.first_name
     query = update.callback_query
@@ -149,6 +171,7 @@ def handle_user_email(update: Update, context: CallbackContext) -> State:
     return State.WAITING_EMAIL
 
 
+@validate_token
 def handle_customer_creation(update: Update, context: CallbackContext) -> State:
     elastic_token = context.bot_data.get("elastic")
 
@@ -180,7 +203,8 @@ def run_bot(telegram_token: str, redis_connection: redis.Redis, elastic_token: s
     updater = Updater(token=telegram_token, use_context=True)
     dispatcher = updater.dispatcher
     dispatcher.bot_data["redis"] = redis_connection
-    dispatcher.bot_data["elastic"] = elastic_token
+    dispatcher.bot_data["elastic"] = elastic_token["access_token"]
+    dispatcher.bot_data["token_expires"] = elastic_token["expires"]
 
     conversation = ConversationHandler(
         entry_points=[CommandHandler("start", handle_menu)],
