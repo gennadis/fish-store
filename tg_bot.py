@@ -45,7 +45,8 @@ def validate_token_expiration(function_to_decorate):
         if current_time >= token_expiration_time:
             logger.info("Getting new Elastic token due to expiration.")
 
-            client_id, client_secret = get_elastic_credentials_for_decorator()
+            client_id = context.bot_data["elastic_client_id"]
+            client_secret = context.bot_data["elastic_client_secret"]
             new_elastic_token = elastic.get_credential_token(client_id, client_secret)
 
             context.bot_data["elastic"] = new_elastic_token["access_token"]
@@ -206,12 +207,20 @@ def handle_customer_creation(update: Update, context: CallbackContext) -> State:
     return State.HANDLE_MENU
 
 
-def run_bot(telegram_token: str, redis_connection: redis.Redis, elastic_token: str):
+def run_bot(
+    telegram_token: str,
+    redis_connection: redis.Redis,
+    elastic_token: str,
+    elastic_client_id: str,
+    elastic_client_secret: str,
+):
     updater = Updater(token=telegram_token, use_context=True)
     dispatcher = updater.dispatcher
     dispatcher.bot_data["redis"] = redis_connection
     dispatcher.bot_data["elastic"] = elastic_token["access_token"]
     dispatcher.bot_data["token_expires"] = elastic_token["expires"]
+    dispatcher.bot_data["elastic_client_id"] = elastic_client_id
+    dispatcher.bot_data["elastic_client_secret"] = elastic_client_secret
 
     conversation = ConversationHandler(
         entry_points=[CommandHandler("start", handle_menu)],
@@ -248,23 +257,16 @@ def run_bot(telegram_token: str, redis_connection: redis.Redis, elastic_token: s
     logger.info("Telegram bot started")
 
 
-def get_elastic_credentials_for_decorator() -> tuple[str, str]:
-    load_dotenv()
-    client_id = os.getenv("ELASTICPATH_CLIENT_ID")
-    client_secret = os.getenv("ELASTICPATH_CLIENT_SECRET")
-
-    return client_id, client_secret
-
-
 def main():
     logging.basicConfig(level=logging.INFO)
 
     load_dotenv()
     telegram_token = os.getenv("TELEGRAM_TOKEN")
 
+    elastic_client_id = os.getenv("ELASTICPATH_CLIENT_ID")
+    elastic_client_secret = os.getenv("ELASTICPATH_CLIENT_SECRET")
     elastic_token = elastic.get_credential_token(
-        client_id=os.getenv("ELASTICPATH_CLIENT_ID"),
-        client_secret=os.getenv("ELASTICPATH_CLIENT_SECRET"),
+        client_id=elastic_client_id, client_secret=elastic_client_secret
     )
 
     redis_connection = redis.Redis(
@@ -278,6 +280,8 @@ def main():
         telegram_token=telegram_token,
         redis_connection=redis_connection,
         elastic_token=elastic_token,
+        elastic_client_id=elastic_client_id,
+        elastic_client_secret=elastic_client_secret,
     )
 
 
