@@ -20,7 +20,6 @@ from telegram.ext import (
 
 import elastic
 import keyboards
-from redis_connection import get_redis_connection
 
 
 logger = logging.getLogger(__file__)
@@ -268,10 +267,11 @@ def main():
         client_secret=os.getenv("ELASTICPATH_CLIENT_SECRET"),
     )
 
-    redis_connection = get_redis_connection(
-        redis_address=os.getenv("REDIS_ADDRESS"),
-        redis_name=os.getenv("REDIS_NAME"),
-        redis_password=os.getenv("REDIS_PASSWORD"),
+    redis_connection = redis.Redis(
+        host=os.getenv("REDIS_HOST"),
+        port=os.getenv("REDIS_PORT"),
+        db=os.getenv("REDIS_NAME"),
+        password=os.getenv("REDIS_PASSWORD"),
     )
 
     run_bot(
